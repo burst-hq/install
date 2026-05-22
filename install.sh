@@ -58,6 +58,22 @@ RELEASES_REPO="burst-hq/burst-cli-releases"
 INSTALL_REPO_RAW="https://raw.githubusercontent.com/burst-hq/install/HEAD"
 
 # ---------------------------------------------------------------------------
+# Style — colors only when stdout is a TTY and NO_COLOR is unset.
+# Mirrors the CLI's own style helper so the install line and the binary
+# share one visual language.
+# ---------------------------------------------------------------------------
+
+if [[ -z "${NO_COLOR:-}" ]] && [[ -t 1 ]]; then
+    GREEN=$'\033[32m'
+    DIM=$'\033[2m'
+    RESET=$'\033[0m'
+else
+    GREEN=""
+    DIM=""
+    RESET=""
+fi
+
+# ---------------------------------------------------------------------------
 # Required tools
 # ---------------------------------------------------------------------------
 
@@ -131,7 +147,7 @@ fi
 WORK_DIR="$(mktemp -d)" || abort "Failed to create temp directory"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-echo "Downloading burst v${VERSION} for ${OS}/${ARCH}..."
+echo "${DIM}Downloading burst v${VERSION} for ${OS}/${ARCH}...${RESET}"
 curl -fsSL --retry 3 -o "${WORK_DIR}/${TARBALL}" "${DOWNLOAD_BASE}/${TARBALL}" \
     || abort "Download failed." \
              "Check that v${VERSION} exists and has a ${OS}/${ARCH} binary:" \
@@ -143,14 +159,14 @@ curl -fsSL --retry 3 -o "${WORK_DIR}/SHA256SUMS" "${DOWNLOAD_BASE}/SHA256SUMS" \
 EXPECTED="$(grep "${TARBALL}" "${WORK_DIR}/SHA256SUMS" | awk '{print $1}')"
 [[ -n "$EXPECTED" ]] || abort "No checksum found for ${TARBALL} in SHA256SUMS"
 
-echo "Verifying checksum..."
+echo "${DIM}Verifying checksum...${RESET}"
 sha256_check "${WORK_DIR}/${TARBALL}" "$EXPECTED"
 
 # ---------------------------------------------------------------------------
 # Install
 # ---------------------------------------------------------------------------
 
-echo "Installing to ${BURST_BIN_DIR}..."
+echo "${DIM}Installing to ${BURST_BIN_DIR}...${RESET}"
 mkdir -p "$BURST_BIN_DIR"
 tar -xzf "${WORK_DIR}/${TARBALL}" -C "$BURST_BIN_DIR"
 chmod +x "${BURST_BIN_DIR}/burst"
@@ -202,25 +218,14 @@ fi
 # ---------------------------------------------------------------------------
 
 echo ""
-if "${BURST_BIN_DIR}/burst" version >/dev/null 2>&1; then
-    echo "$("${BURST_BIN_DIR}/burst" version) installed successfully."
-else
-    echo "Installed burst to ${BURST_BIN_DIR}/burst"
-fi
+echo "${GREEN}✦${RESET} burst ${DIM}v${VERSION}${RESET} installed.  Run ${DIM}'burst login'${RESET} to get started."
 
 if [[ ":${PATH}:" != *":${BURST_BIN_DIR}:"* ]]; then
-    echo ""
     case "$SHELL_NAME" in
-        zsh)  echo "Run 'source ~/.zshrc' or open a new terminal to use burst." ;;
-        bash) echo "Run 'source ~/.bashrc' or open a new terminal to use burst." ;;
-        fish) echo "Run 'source ~/.config/fish/config.fish' or open a new terminal to use burst." ;;
-        *)    echo "Open a new terminal or add ${BURST_BIN_DIR} to your PATH." ;;
+        zsh)  echo "${DIM}  open a new terminal or run: source ~/.zshrc${RESET}" ;;
+        bash) echo "${DIM}  open a new terminal or run: source ~/.bashrc${RESET}" ;;
+        fish) echo "${DIM}  open a new terminal or run: source ~/.config/fish/config.fish${RESET}" ;;
+        *)    echo "${DIM}  open a new terminal or add ${BURST_BIN_DIR} to your PATH${RESET}" ;;
     esac
 fi
-
 echo ""
-echo "Get started:"
-echo "  burst signup      Create an account"
-echo "  burst run ./code  Run your first job"
-echo ""
-echo "Docs: https://burst.cx/docs"
